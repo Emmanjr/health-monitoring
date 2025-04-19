@@ -1,3 +1,4 @@
+// src/pages/Auth.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase";
@@ -6,8 +7,6 @@ import {
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
-
-// Material UI
 import {
   Box,
   Paper,
@@ -23,7 +22,6 @@ import {
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-// -------------------- Styled Components --------------------
 const Container = styled(Box)(() => ({
   minHeight: "100vh",
   display: "flex",
@@ -52,36 +50,24 @@ export default function Auth() {
   // Snackbar state
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [snackbarSeverity, setSnackbarSeverity] = useState<
-    "success" | "error" | "warning" | "info"
-  >("info");
+  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error" | "warning" | "info">("info");
 
-  // Show Snackbar Function
-  const showSnackbar = (
-    message: string,
-    severity: "success" | "error" | "warning" | "info"
-  ) => {
+  const showSnackbar = (message: string, severity: "success" | "error" | "warning" | "info") => {
     setSnackbarMessage(message);
     setSnackbarSeverity(severity);
     setSnackbarOpen(true);
   };
 
-  // Close Snackbar
-  const handleCloseSnackbar = (
-    event?: React.SyntheticEvent | Event,
-    reason?: string
-  ) => {
+  const handleCloseSnackbar = (event?: React.SyntheticEvent | Event, reason?: string) => {
     if (reason === "clickaway") return;
     setSnackbarOpen(false);
   };
 
-  // Toggle Signup/Login Mode
   const toggleMode = () => {
     setIsSignup(!isSignup);
     setSnackbarMessage("");
   };
 
-  // Unified Submit Handler for Signup/Login
   const handleSubmit = async () => {
     try {
       if (!email || !password || (isSignup && !name)) {
@@ -91,28 +77,18 @@ export default function Auth() {
 
       if (isSignup) {
         // Signup
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-
         await setDoc(doc(db, "users", user.uid), { name, email, role });
-
         showSnackbar("Successfully signed up!", "success");
         setTimeout(() => {
-          navigate(`/${role}`);
+          // Navigate to onboarding screens after signup
+          navigate("/onboarding");
         }, 2000);
       } else {
         // Login
-        const userCredential = await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-
         const userDoc = await getDoc(doc(db, "users", user.uid));
         const userData = userDoc.data();
 
@@ -181,41 +157,22 @@ export default function Auth() {
           </FormControl>
         )}
 
-        {/* Submit Button */}
-        <Button
-          variant="contained"
-          color="primary"
-          fullWidth
-          onClick={handleSubmit}
-        >
+        <Button variant="contained" color="primary" fullWidth onClick={handleSubmit}>
           {isSignup ? "Sign Up" : "Log In"}
         </Button>
 
-        {/* Toggle Mode Button */}
-        <Button
-          variant="text"
-          color="secondary"
-          fullWidth
-          onClick={toggleMode}
-        >
-          {isSignup
-            ? "Already have an account? Log in"
-            : "Don't have an account? Sign up"}
+        <Button variant="text" color="secondary" fullWidth onClick={toggleMode}>
+          {isSignup ? "Already have an account? Log in" : "Don't have an account? Sign up"}
         </Button>
       </FormWrapper>
 
-      {/* Snackbar Notifications */}
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={5000}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbarSeverity}
-          sx={{ width: "100%" }}
-        >
+        <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: "100%" }}>
           {snackbarMessage}
         </Alert>
       </Snackbar>

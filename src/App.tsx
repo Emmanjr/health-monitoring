@@ -1,16 +1,33 @@
+// src/App.tsx
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { auth, db } from "./firebase";
 import { doc, getDoc } from "firebase/firestore";
+
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminAppointments from "./pages/AdminAppointments";
+import AdminPatientDetails from "./pages/AdminPatientDetails"; // New admin patient details page
 import DoctorAppointments from "./pages/DoctorAppointments";
 import HealthRecords from "./pages/HealthRecords";
-import Patient from "./pages/Patient";
+import Patient from "./pages/Patient"; // If you still have a main "Patient" file
 import Doctor from "./pages/Doctor";
 import Auth from "./pages/Auth";
+import Onboarding from "./pages/Onboarding";
 
-function ProtectedRoute({ children, allowedRoles }: { children: React.ReactElement; allowedRoles: string[] }) {
+import PatientLayout from "./layouts/PatientLayout"; // Layout for patients
+import AdminLayout from "./layouts/AdminLayout";     // Layout for admins
+import Vitals from "./pages/patient/Vitals";           // New
+import Appointments from "./pages/patient/Appointments"; // New
+import HealthChart from "./pages/patient/HealthChart";   // New health chart route
+
+// ProtectedRoute ensures that only allowed roles can access certain routes
+function ProtectedRoute({
+  children,
+  allowedRoles,
+}: {
+  children: React.ReactElement;
+  allowedRoles: string[];
+}) {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -29,7 +46,6 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactEleme
   }, []);
 
   if (loading) return <p>Loading...</p>;
-
   return userRole && allowedRoles.includes(userRole) ? children : <Navigate to="/" />;
 }
 
@@ -37,24 +53,25 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Public Routes */}
         <Route path="/" element={<Auth />} />
-        {/* Patient Routes */}
+        <Route path="/onboarding" element={<Onboarding />} />
+
+        {/* Patient Routes (Nested under PatientLayout) */}
         <Route
           path="/patient"
           element={
             <ProtectedRoute allowedRoles={["patient"]}>
-              <Patient />
+              <PatientLayout />
             </ProtectedRoute>
           }
-        />
-        <Route
-          path="/health-records"
-          element={
-            <ProtectedRoute allowedRoles={["patient"]}>
-              <HealthRecords />
-            </ProtectedRoute>
-          }
-        />
+        >
+          <Route index element={<Patient />} />
+          <Route path="vitals" element={<Vitals />} />
+          <Route path="appointments" element={<Appointments />} />
+          <Route path="healthchart" element={<HealthChart />} />
+        </Route>
+
         {/* Doctor Routes */}
         <Route
           path="/doctor"
@@ -72,23 +89,20 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* Admin Routes */}
+
+        {/* Admin Routes (Nested under AdminLayout) */}
         <Route
           path="/admin"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminDashboard />
+              <AdminLayout />
             </ProtectedRoute>
           }
-        />
-        <Route
-          path="/admin-appointments"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminAppointments />
-            </ProtectedRoute>
-          }
-        />
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="appointments" element={<AdminAppointments />} />
+          <Route path="patient-details" element={<AdminPatientDetails />} />
+        </Route>
       </Routes>
     </Router>
   );

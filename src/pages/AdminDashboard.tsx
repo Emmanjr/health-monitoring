@@ -1,20 +1,18 @@
 // src/AdminDashboard.tsx
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { db, auth } from "../firebase";
 import { collection, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
-import { User, Appointment } from "../types";
+import { User } from "../types";
 import {
   Container,
   Box,
   Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
   Paper,
   CircularProgress,
   Alert,
@@ -22,8 +20,8 @@ import {
   IconButton,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
+import Pagination from "@mui/material/Pagination";
 
-// Custom hook for managing users
 const useUsers = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +44,6 @@ const useUsers = () => {
         console.error("Error fetching users:", err);
       }
     );
-
     return () => unsubscribe();
   }, []);
 
@@ -64,62 +61,19 @@ const useUsers = () => {
   return { users, loading, error, deleteUser };
 };
 
-// Custom hook for managing appointments
-const useAppointments = () => {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, "appointments"),
-      (snapshot) => {
-        const appointmentData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...(doc.data() as Omit<Appointment, "id">),
-        }));
-        setAppointments(appointmentData);
-        setLoading(false);
-      },
-      (err) => {
-        setError("Failed to load appointments");
-        setLoading(false);
-        console.error("Error fetching appointments:", err);
-      }
-    );
-
-    return () => unsubscribe();
-  }, []);
-
-  const deleteAppointment = async (appointmentId: string) => {
-    if (!window.confirm("Are you sure you want to delete this appointment?")) return;
-    try {
-      await deleteDoc(doc(db, "appointments", appointmentId));
-      setAppointments((prev) => prev.filter((app) => app.id !== appointmentId));
-    } catch (err) {
-      console.error("Error deleting appointment:", err);
-      alert("Failed to delete appointment");
-    }
-  };
-
-  return { appointments, loading, error, deleteAppointment };
-};
-
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const {
-    users,
-    loading: usersLoading,
-    error: usersError,
-    deleteUser,
-  } = useUsers();
+  const { users, loading, error, deleteUser } = useUsers();
 
-  const {
-    appointments,
-    loading: appsLoading,
-    error: appsError,
-    deleteAppointment,
-  } = useAppointments();
+  // Pagination states for Users
+  const [page, setPage] = useState(1);
+  const perPage = 5;
+  const totalPages = Math.ceil(users.length / perPage);
+  const displayedUsers = users.slice((page - 1) * perPage, page * perPage);
+
+  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+    setPage(value);
+  };
 
   const handleLogout = async () => {
     try {
@@ -131,7 +85,7 @@ export default function AdminDashboard() {
     }
   };
 
-  if (usersLoading || appsLoading) {
+  if (loading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
         <CircularProgress />
@@ -140,117 +94,30 @@ export default function AdminDashboard() {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Box sx={{ 
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        mb: 4
-      }}>
-        <Typography variant="h3" gutterBottom>
-          Admin Dashboard
-        </Typography>
-        <Button
-          variant="contained"
-          color="secondary"
-          onClick={handleLogout}
-          sx={{ height: "fit-content" }}
-        >
-          Logout
-        </Button>
-      </Box>
-
-      {usersError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {usersError}
-        </Alert>
-      )}
-      {appsError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {appsError}
-        </Alert>
-      )}
-
-      {/* Users Table */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h5" gutterBottom>
-          Manage Users ({users.length})
-        </Typography>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Role</TableCell>
-                <TableCell align="center">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>{user.name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.role}</TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      color="error"
-                      onClick={() => deleteUser(user.id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Box>
-
-      {/* Appointments Table */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h5" gutterBottom>
-          Manage Appointments ({appointments.length})
-        </Typography>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Patient</TableCell>
-                <TableCell>Doctor</TableCell>
-                <TableCell>Date</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell align="center">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {appointments.map((app) => (
-                <TableRow key={app.id}>
-                  <TableCell>{app.patientName}</TableCell>
-                  <TableCell>{app.doctorName}</TableCell>
-                  <TableCell>
-                    {app.appointmentDate?.toDate().toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </TableCell>
-                  <TableCell>{app.status}</TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      color="error"
-                      onClick={() => deleteAppointment(app.id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+    <Container maxWidth="sm" sx={{ py: 2, px: 1 }}>
+      <Typography variant="h6" sx={{ mb: 1 }}>
+        Manage Users ({users.length})
+      </Typography>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      <Paper sx={{ mb: 2 }}>
+        <List>
+          {displayedUsers.map((user) => (
+            <ListItem key={user.id} divider>
+              <ListItemText
+                primary={user.name}
+                secondary={`${user.email} • ${user.role}`}
+              />
+              <ListItemSecondaryAction>
+                <IconButton color="error" onClick={() => deleteUser(user.id)}>
+                  <DeleteIcon />
+                </IconButton>
+              </ListItemSecondaryAction>
+            </ListItem>
+          ))}
+        </List>
+      </Paper>
+      <Box sx={{ display: "flex", justifyContent: "center" }}>
+        <Pagination count={totalPages} page={page} onChange={handlePageChange} color="primary" />
       </Box>
     </Container>
   );

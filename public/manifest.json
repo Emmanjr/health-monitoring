@@ -4,7 +4,7 @@
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#6200ea",
+  "theme_color": "#000000",
   "icons": [
     {
       "src": "/health.png",
@@ -16,5 +16,10 @@
       "sizes": "512x512",
       "type": "image/png"
     }
+  ],
+  "display_override": [
+    "fullscreen",
+    "standalone",
+    "window-controls-overlay"
   ]
 }
