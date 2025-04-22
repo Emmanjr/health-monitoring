@@ -31,7 +31,8 @@ export default function HealthRecords() {
               <td>{rec.bp}</td>
               <td>{rec.heartRate}</td>
               <td>{rec.temperature}</td>
-              <td>{rec.timestamp.toDate().toLocaleString()}</td>
+              <td>{rec.timestamp && typeof rec.timestamp.toDate === 'function' ? 
+                rec.timestamp.toDate().toLocaleString() : 'No date available'}</td>
             </tr>
           ))}
         </tbody>
